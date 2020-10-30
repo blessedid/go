@@ -3,6 +3,7 @@ package apiserver
 import (
 	"io"
 	"net/http"
+	"vk-go/app/store"
 
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
@@ -13,6 +14,7 @@ type APIServer struct {
 	config *Config
 	logger *zap.Logger
 	router *mux.Router
+	store  *store.Store
 }
 
 // New ...
@@ -29,6 +31,10 @@ func (s *APIServer) Start() error {
 
 	s.configureRouter()
 
+	if err := s.configureStore(); err != nil {
+		return err
+	}
+
 	s.logger.Info("Server start")
 
 	return http.ListenAndServe(s.config.BindAddr, s.router)
@@ -44,6 +50,17 @@ func logger() *zap.Logger {
 
 func (s *APIServer) configureRouter() {
 	s.router.HandleFunc("/calbackAPI", s.handleCalbackAPI())
+}
+
+func (s *APIServer) configureStore() error {
+	st := store.New(s.config.Store)
+	if err := st.Open(); err != nil {
+		return err
+	}
+
+	s.store = st
+
+	return nil
 }
 
 func (s *APIServer) handleCalbackAPI() http.HandlerFunc {
